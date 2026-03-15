@@ -1,0 +1,1723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Decision Tree Explorer</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --panel: #171b26;
+    --panel2: #1e2333;
+    --border: #2a3045;
+    --accent: #4ade80;
+    --accent2: #60a5fa;
+    --accent3: #f59e0b;
+    --accent4: #f472b6;
+    --text: #e2e8f0;
+    --muted: #8892a4;
+    --danger: #f87171;
+    --split-left: #34d399;
+    --split-right: #f87171;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Lora', serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: linear-gradient(135deg, #0f1117 0%, #161d30 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 1.5rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo-icon {
+    width: 42px; height: 42px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; flex-shrink: 0;
+  }
+  header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.4rem; font-weight: 800;
+    letter-spacing: -0.02em;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  header p { font-size: 0.78rem; color: var(--muted); font-style: italic; margin-top: 1px; }
+
+  /* ── TABS ── */
+  .tab-bar {
+    display: flex; gap: 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tab-bar button {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.78rem; font-weight: 600;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    padding: 0.85rem 1.4rem;
+    background: none; border: none;
+    color: var(--muted); cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s; white-space: nowrap;
+  }
+  .tab-bar button.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-bar button:hover:not(.active) { color: var(--text); }
+
+  /* ── MAIN LAYOUT ── */
+  .tab-content { display: none; }
+  .tab-content.active { display: block; animation: fadeIn 0.3s; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  .content-wrap { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .card-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.85rem; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--accent2); margin-bottom: 1rem;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .card-title .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent2);
+  }
+
+  /* ── CONCEPT SECTION ── */
+  .concept-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  @media (max-width: 700px) { .concept-grid { grid-template-columns: 1fr; } }
+
+  .concept-block {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 10px; padding: 1.2rem;
+  }
+  .concept-block h3 {
+    font-family: 'Syne', sans-serif; font-size: 0.9rem; font-weight: 700;
+    color: var(--accent3); margin-bottom: 0.6rem;
+  }
+  .concept-block p { font-size: 0.85rem; color: var(--muted); line-height: 1.7; }
+
+  .formula-box {
+    background: #12151f;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px; padding: 0.8rem 1rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem; color: var(--accent);
+    margin: 0.8rem 0; line-height: 1.8;
+  }
+
+  /* ── IMPURITY VIZ ── */
+  .impurity-demo {
+    display: flex; gap: 1rem; align-items: flex-end; margin: 1rem 0;
+    flex-wrap: wrap;
+  }
+  .impurity-bar-wrap { flex: 1; min-width: 120px; text-align: center; }
+  .impurity-label { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--muted); margin-bottom: 0.4rem; }
+  .impurity-bar {
+    height: 6px; border-radius: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width 0.4s;
+  }
+  .impurity-val { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: var(--accent2); margin-top: 0.3rem; }
+
+  /* ── UPLOAD ZONE ── */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 2.5rem;
+    text-align: center;
+    cursor: pointer; transition: all 0.25s;
+    position: relative;
+  }
+  .upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: rgba(74,222,128,0.04); }
+  .upload-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .upload-icon { font-size: 2.2rem; margin-bottom: 0.6rem; }
+  .upload-zone h3 { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700; margin-bottom: 0.3rem; }
+  .upload-zone p { font-size: 0.8rem; color: var(--muted); }
+
+  /* ── CONTROLS ── */
+  .controls-row {
+    display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;
+    margin-bottom: 1.5rem;
+  }
+  .form-group { display: flex; flex-direction: column; gap: 0.35rem; }
+  .form-group label {
+    font-family: 'Syne', sans-serif; font-size: 0.72rem;
+    font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--muted);
+  }
+  select, input[type=range], input[type=number] {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 7px; padding: 0.5rem 0.8rem;
+    color: var(--text); font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem; outline: none; transition: border-color 0.2s;
+    min-width: 160px;
+  }
+  select:focus, input:focus { border-color: var(--accent2); }
+
+  /* ── METRIC TOGGLE ── */
+  .metric-toggle {
+    display: flex; gap: 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+  }
+  .metric-toggle button {
+    flex: 1; padding: 0.5rem 1rem;
+    background: none; border: none;
+    font-family: 'Syne', sans-serif; font-size: 0.78rem; font-weight: 700;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--muted); cursor: pointer; transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .metric-toggle button.active { background: var(--accent); color: #0f1117; }
+
+  /* ── BTN ── */
+  .btn {
+    font-family: 'Syne', sans-serif; font-size: 0.8rem; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 0.6rem 1.3rem; border-radius: 8px; border: none;
+    cursor: pointer; transition: all 0.2s; display: inline-flex;
+    align-items: center; gap: 0.4rem;
+  }
+  .btn-primary { background: var(--accent); color: #0f1117; }
+  .btn-primary:hover { background: #22d354; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(74,222,128,0.3); }
+  .btn-secondary { background: var(--panel2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--accent2); color: var(--accent2); }
+  .btn-outline { background: transparent; color: var(--accent3); border: 1px solid var(--accent3); }
+  .btn-outline:hover { background: rgba(245,158,11,0.1); }
+
+  /* ── TABLE ── */
+  .data-table-wrap { overflow: auto; max-height: 300px; border-radius: 8px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  thead { background: var(--panel2); position: sticky; top: 0; z-index: 2; }
+  th {
+    font-family: 'Syne', sans-serif; font-size: 0.72rem; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent2);
+    padding: 0.6rem 0.8rem; border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  td { padding: 0.45rem 0.8rem; border-bottom: 1px solid rgba(42,48,69,0.5); font-family: 'JetBrains Mono', monospace; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  td.class-0 { color: var(--split-left); font-weight: 500; }
+  td.class-1 { color: var(--split-right); font-weight: 500; }
+
+  /* ── SPLIT ANALYSIS TABLE ── */
+  .split-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  .split-table th { font-family: 'Syne', sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border); }
+  .split-table td { font-family: 'JetBrains Mono', monospace; padding: 0.4rem 0.6rem; border-bottom: 1px solid rgba(42,48,69,0.3); }
+  .split-table tr.best-row td { background: rgba(74,222,128,0.08); color: var(--accent); }
+  .split-table tr.best-row td:first-child::before { content: "★ "; color: var(--accent3); }
+
+  /* ── CANVAS ── */
+  canvas { border-radius: 8px; display: block; max-width: 100%; }
+
+  /* ── TREE SVG ── */
+  #tree-svg-wrap {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 10px; padding: 1rem;
+    overflow: auto; min-height: 260px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #tree-svg { font-family: 'JetBrains Mono', monospace; }
+
+  /* ── TOOLTIP ── */
+  .tooltip {
+    position: fixed; z-index: 9999;
+    background: var(--panel); border: 1px solid var(--accent2);
+    border-radius: 8px; padding: 0.6rem 0.9rem;
+    font-size: 0.78rem; color: var(--text);
+    pointer-events: none; opacity: 0; transition: opacity 0.15s;
+    max-width: 220px;
+  }
+
+  /* ── PROGRESS/TAGS ── */
+  .tag {
+    display: inline-flex; align-items: center;
+    font-family: 'Syne', sans-serif; font-size: 0.68rem; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 0.2rem 0.55rem; border-radius: 4px; margin-right: 0.3rem;
+  }
+  .tag-green { background: rgba(74,222,128,0.15); color: var(--accent); }
+  .tag-blue  { background: rgba(96,165,250,0.15); color: var(--accent2); }
+  .tag-amber { background: rgba(245,158,11,0.15); color: var(--accent3); }
+  .tag-pink  { background: rgba(244,114,182,0.15); color: var(--accent4); }
+
+  /* ── INFO GRID ── */
+  .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.8rem; margin-bottom: 1.2rem; }
+  .info-box {
+    background: var(--panel2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.8rem 1rem; text-align: center;
+  }
+  .info-box .val { font-family: 'Syne', sans-serif; font-size: 1.4rem; font-weight: 800; }
+  .info-box .lbl { font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; }
+
+  /* ── SLIDER SECTION ── */
+  .slider-section { margin-top: 1rem; }
+  .slider-row { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+  input[type=range] {
+    -webkit-appearance: none; height: 5px;
+    background: linear-gradient(90deg, var(--accent) var(--pct, 50%), var(--panel2) var(--pct, 50%));
+    border-radius: 3px; cursor: pointer; padding: 0; min-width: 200px; flex: 1;
+    border: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 18px; height: 18px;
+    background: var(--accent); border-radius: 50%; cursor: pointer;
+    box-shadow: 0 0 0 3px rgba(74,222,128,0.2);
+  }
+  .cutoff-val {
+    font-family: 'JetBrains Mono', monospace; font-size: 1rem;
+    font-weight: 500; color: var(--accent); min-width: 70px; text-align: right;
+  }
+
+  /* ── NODE STATS ── */
+  .node-stats-row { display: flex; gap: 1rem; flex-wrap: wrap; margin: 0.8rem 0; }
+  .node-box {
+    flex: 1; min-width: 180px;
+    background: var(--panel2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1rem;
+  }
+  .node-box h4 { font-family: 'Syne', sans-serif; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.7rem; }
+  .node-box.node-root h4 { color: var(--accent2); }
+  .node-box.node-left h4 { color: var(--split-left); }
+  .node-box.node-right h4 { color: var(--split-right); }
+  .node-metric { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.3rem; }
+  .node-metric .k { color: var(--muted); }
+  .node-metric .v { font-family: 'JetBrains Mono', monospace; font-weight: 500; }
+
+  /* ── GAIN BAR ── */
+  .gain-bar-wrap { margin-top: 1rem; }
+  .gain-bar-label { font-family: 'Syne', sans-serif; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 0.4rem; }
+  .gain-bar-track { background: var(--panel2); border-radius: 4px; height: 10px; overflow: hidden; border: 1px solid var(--border); }
+  .gain-bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s cubic-bezier(.4,0,.2,1); background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+  .gain-bar-val { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: var(--accent2); margin-top: 0.3rem; }
+
+  /* ── EXPORT SECTION ── */
+  .export-row { display: flex; gap: 0.8rem; flex-wrap: wrap; }
+
+  /* ── SCATTER CANVAS WRAPPER ── */
+  .canvas-wrap { position: relative; }
+  .canvas-wrap canvas { cursor: crosshair; }
+
+  /* ── PRINT ── */
+  @media print {
+    body { background: white; color: black; }
+    header, .tab-bar, .btn, .controls-row, .upload-zone, input, select { display: none !important; }
+    .tab-content { display: block !important; }
+    .card { border: 1px solid #ccc; background: white; break-inside: avoid; }
+    .card-title { color: #333; }
+    .concept-block { background: #f5f5f5; }
+    #tree-svg-wrap { background: white; }
+    canvas { max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-icon">🌿</div>
+  <div>
+    <h1>Decision Tree Explorer</h1>
+    <p>An interactive guide to classification trees — concepts, metrics, and hands-on splitting</p>
+  </div>
+</header>
+
+<div class="tab-bar">
+  <button class="active" onclick="switchTab('concepts')">① Concepts</button>
+  <button onclick="switchTab('metrics')">② Metrics</button>
+  <button onclick="switchTab('data')">③ Load Data</button>
+  <button onclick="switchTab('split')">④ Split Explorer</button>
+  <button onclick="switchTab('sandbox')">⑤ Sandbox Tree</button>
+  <button onclick="switchTab('export')">⑥ Export</button>
+</div>
+
+<!-- ═══════════════════════════════════ TAB 1: CONCEPTS ═══════════════════════════════════ -->
+<div id="tab-concepts" class="tab-content active">
+<div class="content-wrap">
+
+  <div class="card">
+    <div class="card-title"><span class="dot"></span>What Is a Classification Tree?</div>
+    <div class="concept-grid">
+      <div class="concept-block">
+        <h3>🌳 The Big Idea</h3>
+        <p>A decision tree partitions the feature space into rectangular regions using a series of <em>binary splits</em>. Each internal node asks a yes/no question about one feature. Observations flow down until they reach a <em>leaf</em>, which gives the predicted class.</p>
+      </div>
+      <div class="concept-block">
+        <h3>✂️ How a Node is Split</h3>
+        <p>At each node, the algorithm tries every feature and every possible threshold. It picks the <em>(feature, threshold)</em> pair that produces the greatest <em>reduction in impurity</em> — a measure of class mixing in each child node.</p>
+      </div>
+      <div class="concept-block">
+        <h3>📐 Optimal Cutoff for Continuous Predictors</h3>
+        <p>For a numeric variable <em>X</em>, sort the unique observed values. For each midpoint between consecutive values, compute the weighted impurity of the two resulting subsets. The cutoff that minimises weighted impurity wins.</p>
+        <div class="formula-box">For each threshold t:
+  Left  = {x : x ≤ t}
+  Right = {x : x > t}
+
+  Score(t) = |Left|/n · Imp(Left)
+           + |Right|/n · Imp(Right)
+
+  t* = argmin Score(t)</div>
+      </div>
+      <div class="concept-block">
+        <h3>🔁 Recursive Partitioning</h3>
+        <p>After finding the best split at the root, the same procedure repeats independently in each child node. This continues until a stopping criterion is met (max depth, min samples per leaf, or zero impurity).</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="dot"></span>Visual Intuition — Interactive Splitting</div>
+
+    <!-- controls row -->
+    <div style="display:flex;gap:0.8rem;flex-wrap:wrap;align-items:center;margin-bottom:0.9rem;">
+      <div class="metric-toggle" style="min-width:0;">
+        <button id="vi-metric-gini" class="active" onclick="viSetMetric('gini')">Gini</button>
+        <button id="vi-metric-entropy" onclick="viSetMetric('entropy')">Entropy</button>
+      </div>
+      <div class="metric-toggle" style="min-width:0;">
+        <button id="vi-axis-v" class="active" onclick="viSetAxis('v')">Vertical cut (X₁)</button>
+        <button id="vi-axis-h" onclick="viSetAxis('h')">Horizontal cut (X₂)</button>
+        <button id="vi-axis-both" onclick="viSetAxis('both')">Both</button>
+      </div>
+      <button class="btn btn-secondary" style="padding:0.45rem 0.9rem;font-size:0.72rem;" onclick="viReshuffle()">🔀 New points</button>
+      <span style="font-size:0.75rem;color:var(--muted);font-style:italic;">← Drag the dashed line(s) on the plot</span>
+    </div>
+
+    <div style="display:flex;gap:1.2rem;flex-wrap:wrap;align-items:flex-start;">
+
+      <!-- canvas -->
+      <div style="flex:1;min-width:300px;position:relative;">
+        <canvas id="split-visual-canvas" width="460" height="340"
+          style="width:100%;border:1px solid var(--border);border-radius:8px;background:#12151f;cursor:crosshair;touch-action:none;"></canvas>
+      </div>
+
+      <!-- live stats panel -->
+      <div style="flex:0 0 220px;min-width:200px;display:flex;flex-direction:column;gap:0.7rem;">
+
+        <!-- root -->
+        <div class="concept-block" style="padding:0.9rem;">
+          <h3 style="color:var(--accent2);margin-bottom:0.5rem;">🌿 Root (all data)</h3>
+          <div style="font-size:0.8rem;color:var(--muted);">n = <span id="vi-root-n" style="color:var(--text);font-family:'JetBrains Mono',monospace;">—</span></div>
+          <div style="font-size:0.8rem;color:var(--muted);">Impurity = <span id="vi-root-imp" style="color:var(--text);font-family:'JetBrains Mono',monospace;">—</span></div>
+        </div>
+
+        <!-- left / top child -->
+        <div class="concept-block" style="padding:0.9rem;border-color:rgba(52,211,153,0.4);">
+          <h3 style="color:#34d399;margin-bottom:0.5rem;" id="vi-left-title">◀ Left child</h3>
+          <div style="font-size:0.8rem;color:var(--muted);">n = <span id="vi-left-n" style="color:var(--text);font-family:'JetBrains Mono',monospace;">—</span></div>
+          <div style="font-size:0.8rem;color:var(--muted);">Impurity = <span id="vi-left-imp" style="color:#34d399;font-family:'JetBrains Mono',monospace;font-weight:700;">—</span></div>
+          <div style="font-size:0.75rem;color:var(--muted);margin-top:0.3rem;">Predict: <span id="vi-left-pred" style="color:#34d399;font-family:'JetBrains Mono',monospace;">—</span></div>
+        </div>
+
+        <!-- right / bottom child -->
+        <div class="concept-block" style="padding:0.9rem;border-color:rgba(248,113,113,0.4);">
+          <h3 style="color:#f87171;margin-bottom:0.5rem;" id="vi-right-title">▶ Right child</h3>
+          <div style="font-size:0.8rem;color:var(--muted);">n = <span id="vi-right-n" style="color:var(--text);font-family:'JetBrains Mono',monospace;">—</span></div>
+          <div style="font-size:0.8rem;color:var(--muted);">Impurity = <span id="vi-right-imp" style="color:#f87171;font-family:'JetBrains Mono',monospace;font-weight:700;">—</span></div>
+          <div style="font-size:0.75rem;color:var(--muted);margin-top:0.3rem;">Predict: <span id="vi-right-pred" style="color:#f87171;font-family:'JetBrains Mono',monospace;">—</span></div>
+        </div>
+
+        <!-- gain -->
+        <div class="concept-block" style="padding:0.9rem;border-color:rgba(245,158,11,0.4);">
+          <h3 style="color:var(--accent3);margin-bottom:0.4rem;">📈 Info Gain</h3>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:1.05rem;font-weight:700;color:var(--accent3);" id="vi-gain">—</div>
+          <div class="gain-bar-track" style="margin-top:0.4rem;"><div class="gain-bar-fill" id="vi-gain-bar" style="width:0%;background:linear-gradient(90deg,#f59e0b,#f472b6);"></div></div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-top:0.4rem;">Optimal cutoff: <span id="vi-optimal" style="color:var(--accent);font-family:'JetBrains Mono',monospace;">—</span></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════════════════════════════ TAB 2: METRICS ═══════════════════════════════════ -->
+<div id="tab-metrics" class="tab-content">
+<div class="content-wrap">
+
+  <div class="card">
+    <div class="card-title"><span class="dot"></span>Impurity Metrics</div>
+    <div class="concept-grid">
+      <div class="concept-block">
+        <h3>🎲 Gini Impurity</h3>
+        <p>Probability that a randomly chosen observation is misclassified if labelled according to the class distribution in the node.</p>
+        <div class="formula-box">Gini(t) = 1 − Σ pᵢ²
+
+For binary:
+Gini = 1 − p² − (1−p)²
+     = 2p(1−p)
+
+Range: [0, 0.5]  (binary case)
+Max at p = 0.5 (50/50 split)</div>
+        <p style="margin-top:0.6rem;">Used by default in scikit-learn's CART algorithm. Computationally fast — no logarithms.</p>
+      </div>
+      <div class="concept-block">
+        <h3>📊 Entropy (Information Gain)</h3>
+        <p>Average number of bits needed to encode the class label. Borrowed from information theory.</p>
+        <div class="formula-box">H(t) = −Σ pᵢ · log₂(pᵢ)
+
+For binary:
+H = −p·log₂p − (1−p)·log₂(1−p)
+
+Range: [0, log₂K]
+Max at uniform distribution
+(K = number of classes)</div>
+        <p style="margin-top:0.6rem;"><strong>Information Gain</strong> = H(parent) − weighted H(children). Higher is better.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="dot"></span>Interactive Comparison — Binary Node</div>
+    <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem;">Drag the slider to change the proportion of class 1 in a node. Watch how Gini and Entropy change.</p>
+    <div class="slider-row" style="margin-bottom:1rem;">
+      <label style="font-family:'Syne',sans-serif;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);">Class 1 proportion (p)</label>
+      <input type="range" id="p-slider" min="0" max="100" value="50" style="flex:1;"
+        oninput="updateMetricPlot(this.value/100)">
+      <span class="cutoff-val" id="p-val">0.50</span>
+    </div>
+    <canvas id="metric-canvas" width="700" height="220" style="width:100%;border:1px solid var(--border);border-radius:8px;background:#12151f;"></canvas>
+    <div style="display:flex;gap:1.5rem;margin-top:0.8rem;flex-wrap:wrap;">
+      <div>
+        <span class="tag tag-green">Gini</span>
+        <span id="gini-live" style="font-family:'JetBrains Mono',monospace;font-size:0.9rem;color:var(--accent);">0.5000</span>
+      </div>
+      <div>
+        <span class="tag tag-blue">Entropy</span>
+        <span id="entropy-live" style="font-family:'JetBrains Mono',monospace;font-size:0.9rem;color:var(--accent2);">1.0000</span>
+      </div>
+      <div style="font-size:0.8rem;color:var(--muted);align-self:center;font-style:italic;">Both are maximised when classes are equally split, and 0 when perfectly pure.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="dot"></span>Which Metric to Choose?</div>
+    <div class="concept-grid">
+      <div class="concept-block">
+        <h3>🟢 Gini — Practical Choice</h3>
+        <p>Slightly faster to compute. Tends to isolate the most frequent class into its own leaf. Works well for most binary classification tasks. Default in many libraries.</p>
+      </div>
+      <div class="concept-block">
+        <h3>🔵 Entropy — Theoretical Depth</h3>
+        <p>More sensitive to class distribution changes. Penalises impure nodes more heavily at intermediate impurity levels. Can produce slightly different tree shapes, especially in multiclass settings.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════════════════════════════ TAB 3: DATA ═══════════════════════════════════ -->
+<div id="tab-data" class="tab-content">
+<div class="content-wrap">
+
+  <div class="card">
+    <div class="card-title"><span class="dot"></span>Load Dataset</div>
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-start;">
+      <div style="flex:1;min-width:260px;">
+        <div class="upload-zone" id="upload-zone" onclick="document.getElementById('csv-file').click()">
+          <input type="file" id="csv-file" accept=".csv" onchange="loadCSV(this)">
+          <div class="upload-icon">📂</div>
+          <h3>Drop a CSV file here</h3>
+          <p>or click to browse</p>
+          <p style="margin-top:0.5rem;font-size:0.72rem;">First row = header. Last column treated as <strong>class label</strong>.</p>
+        </div>
+      </div>
+      <div style="flex:1;min-width:260px;">
+        <div class="card-title" style="margin-bottom:0.6rem;"><span class="dot" style="background:var(--accent3)"></span>Demo Datasets</div>
+        <div style="display:flex;flex-direction:column;gap:0.5rem;">
+          <button class="btn btn-secondary" onclick="loadDemo('iris')">🌸 Iris (150 rows, 4 features)</button>
+          <button class="btn btn-secondary" onclick="loadDemo('heart')">❤️ Heart Disease (100 rows, 3 features)</button>
+          <button class="btn btn-secondary" onclick="loadDemo('simple')">🎯 Simple 2-Feature (60 rows)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="data-loaded-section" style="display:none;">
+    <div class="info-grid" id="data-info-grid"></div>
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>Data Preview</div>
+      <div class="data-table-wrap">
+        <table id="data-preview-table"></table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="dot"></span>Class Distribution</div>
+      <canvas id="class-dist-canvas" width="500" height="120" style="width:100%;max-width:500px;border:1px solid var(--border);border-radius:8px;background:#12151f;"></canvas>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════════════════════════════ TAB 4: SPLIT EXPLORER ═══════════════════════════════════ -->
+<div id="tab-split" class="tab-content">
+<div class="content-wrap">
+
+  <div class="card">
+    <div class="card-title"><span class="dot"></span>Find the Best Split</div>
+    <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1.2rem;">Select a feature and metric. The algorithm scans every possible threshold and reports the information gain for each. The best split is highlighted.</p>
+
+    <div class="controls-row">
+      <div class="form-group">
+        <label>Feature (Predictor)</label>
+        <select id="split-feature-select" onchange="runSplitAnalysis()">
+          <option value="">— load data first —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Impurity Metric</label>
+        <div class="metric-toggle">
+          <button id="metric-btn-gini" class="active" onclick="setMetric('gini')">Gini</button>
+          <button id="metric-btn-entropy" onclick="setMetric('entropy')">Entropy</button>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="runSplitAnalysis()">▶ Analyse</button>
+    </div>
+
+    <canvas id="split-scan-canvas" width="700" height="240" style="width:100%;border:1px solid var(--border);border-radius:8px;background:#12151f;"></canvas>
+    <p style="font-size:0.75rem;color:var(--muted);margin-top:0.5rem;font-style:italic;">Green star = optimal threshold (max information gain)</p>
+  </div>
+
+  <div class="card" id="split-results-card" style="display:none;">
+    <div class="card-title"><span class="dot"></span>All Candidate Splits — Ranked</div>
+    <p style="font-size:0.8rem;color:var(--muted);margin-bottom:0.8rem;">Every numeric feature, every midpoint threshold. Sorted by Information Gain ↓</p>
+    <div class="data-table-wrap" style="max-height:360px;">
+      <table>
+        <thead>
+          <tr>
+            <th>Rank</th><th>Feature</th><th>Threshold</th><th>Parent Imp.</th>
+            <th>Left Imp.</th><th>Right Imp.</th><th>Wtd. Child Imp.</th><th>Info Gain</th>
+          </tr>
+        </thead>
+        <tbody id="split-rank-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════════════════════════════ TAB 5: SANDBOX ═══════════════════════════════════ -->
+<div id="tab-sandbox" class="tab-content">
+<div class="content-wrap">
+
+  <div class="card">
+    <div class="card-title"><span class="dot"></span>Build Your Own Stump (Root + 2 Leaves)</div>
+    <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1.2rem;">Choose a feature and drag the slider to set your own cutoff. Observe how the impurity metrics respond in real time.</p>
+
+    <div class="controls-row">
+      <div class="form-group">
+        <label>Feature</label>
+        <select id="sandbox-feature" onchange="sandboxUpdate()">
+          <option value="">— load data first —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Impurity Metric</label>
+        <div class="metric-toggle">
+          <button id="sb-metric-btn-gini" class="active" onclick="setSBMetric('gini')">Gini</button>
+          <button id="sb-metric-btn-entropy" onclick="setSBMetric('entropy')">Entropy</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="slider-section">
+      <div class="slider-row">
+        <label style="font-family:'Syne',sans-serif;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);min-width:120px;">Your Cutoff</label>
+        <input type="range" id="sandbox-slider" min="0" max="100" value="50"
+          oninput="sandboxSliderMove(this.value)">
+        <span class="cutoff-val" id="sandbox-cutoff-val">—</span>
+      </div>
+    </div>
+
+    <canvas id="sandbox-scan-canvas" width="700" height="220"
+      style="width:100%;border:1px solid var(--border);border-radius:8px;background:#12151f;margin:1rem 0;"></canvas>
+
+    <div class="node-stats-row" id="sandbox-node-stats">
+      <div class="node-box node-root">
+        <h4>🌿 Root Node</h4>
+        <div class="node-metric"><span class="k">Samples</span><span class="v" id="sbn-root-n">—</span></div>
+        <div class="node-metric"><span class="k">Classes</span><span class="v" id="sbn-root-cl">—</span></div>
+        <div class="node-metric"><span class="k">Impurity</span><span class="v" id="sbn-root-imp">—</span></div>
+      </div>
+      <div class="node-box node-left">
+        <h4>◀ Left Leaf  (X ≤ cutoff)</h4>
+        <div class="node-metric"><span class="k">Samples</span><span class="v" id="sbn-left-n">—</span></div>
+        <div class="node-metric"><span class="k">Classes</span><span class="v" id="sbn-left-cl">—</span></div>
+        <div class="node-metric"><span class="k">Impurity</span><span class="v" id="sbn-left-imp">—</span></div>
+        <div class="node-metric"><span class="k">Prediction</span><span class="v" id="sbn-left-pred">—</span></div>
+      </div>
+      <div class="node-box node-right">
+        <h4>▶ Right Leaf  (X > cutoff)</h4>
+        <div class="node-metric"><span class="k">Samples</span><span class="v" id="sbn-right-n">—</span></div>
+        <div class="node-metric"><span class="k">Classes</span><span class="v" id="sbn-right-cl">—</span></div>
+        <div class="node-metric"><span class="k">Impurity</span><span class="v" id="sbn-right-imp">—</span></div>
+        <div class="node-metric"><span class="k">Prediction</span><span class="v" id="sbn-right-pred">—</span></div>
+      </div>
+    </div>
+
+    <div class="gain-bar-wrap">
+      <div class="gain-bar-label">Information Gain (your split)</div>
+      <div class="gain-bar-track"><div class="gain-bar-fill" id="gain-bar-fill" style="width:0%"></div></div>
+      <div class="gain-bar-val" id="gain-bar-val">0.0000 &nbsp;<span id="gain-vs-best" style="color:var(--muted);font-size:0.72rem;"></span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="dot"></span>Tree Diagram</div>
+    <div id="tree-svg-wrap">
+      <svg id="tree-svg" width="600" height="220" viewBox="0 0 600 220"></svg>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════════════════════════════ TAB 6: EXPORT ═══════════════════════════════════ -->
+<div id="tab-export" class="tab-content">
+<div class="content-wrap">
+
+  <div class="card">
+    <div class="card-title"><span class="dot"></span>Export Options</div>
+    <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1.2rem;">Download your analysis results or print a summary report.</p>
+    <div class="export-row">
+      <button class="btn btn-primary" onclick="exportSplitCSV()">⬇ Download Split Analysis CSV</button>
+      <button class="btn btn-secondary" onclick="exportDataCSV()">⬇ Download Dataset CSV</button>
+      <button class="btn btn-outline" onclick="printSummary()">🖨 Print Summary Report</button>
+    </div>
+  </div>
+
+  <div id="export-summary" class="card">
+    <div class="card-title"><span class="dot"></span>Summary Report</div>
+    <div id="export-summary-content">
+      <p style="color:var(--muted);font-style:italic;font-size:0.85rem;">Load a dataset and run the split analysis to generate a summary.</p>
+    </div>
+  </div>
+
+  <div class="card" id="export-split-table-card" style="display:none;">
+    <div class="card-title"><span class="dot"></span>Split Analysis Results (all features)</div>
+    <div class="data-table-wrap" style="max-height:400px;">
+      <table>
+        <thead>
+          <tr><th>Rank</th><th>Feature</th><th>Threshold</th><th>Info Gain</th><th>Left N</th><th>Right N</th><th>Left Pred.</th><th>Right Pred.</th></tr>
+        </thead>
+        <tbody id="export-split-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<!-- ═══════════════════ SCRIPT ═══════════════════ -->
+<script>
+/* ─────────── STATE ─────────── */
+let state = {
+  data: [],         // array of row objects
+  features: [],     // numeric feature names
+  classCol: '',     // name of class column
+  classes: [],      // unique class labels
+  metric: 'gini',
+  sbMetric: 'gini',
+  splitResults: [], // [{feature, threshold, gain, leftImp, rightImp, parentImp, leftN, rightN}]
+  sbCutoff: null,
+  sbMaxGain: 0,
+};
+
+/* ─────────── TABS ─────────── */
+function switchTab(id) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-bar button').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  const idx = ['concepts','metrics','data','split','sandbox','export'].indexOf(id);
+  document.querySelectorAll('.tab-bar button')[idx].classList.add('active');
+  if (id === 'concepts') drawConceptScatter();
+  if (id === 'metrics') { drawMetricPlot(0.5); updateMetricPlot(0.5); }
+  if (id === 'split' && state.data.length) runSplitAnalysis();
+  if (id === 'sandbox' && state.data.length) sandboxUpdate();
+  if (id === 'export') buildExportSummary();
+}
+
+/* ─────────── MATH ─────────── */
+function gini(counts, n) {
+  if (n === 0) return 0;
+  return 1 - counts.reduce((s, c) => s + (c/n)**2, 0);
+}
+function entropy(counts, n) {
+  if (n === 0) return 0;
+  return -counts.reduce((s, c) => {
+    if (c === 0) return s;
+    const p = c / n;
+    return s + p * Math.log2(p);
+  }, 0);
+}
+function impurity(counts, n) {
+  return state.metric === 'gini' ? gini(counts, n) : entropy(counts, n);
+}
+function impuritySB(counts, n) {
+  return state.sbMetric === 'gini' ? gini(counts, n) : entropy(counts, n);
+}
+function classCounts(rows) {
+  const m = {};
+  state.classes.forEach(c => m[c] = 0);
+  rows.forEach(r => m[r[state.classCol]]++);
+  return state.classes.map(c => m[c]);
+}
+function majority(rows) {
+  const m = {};
+  rows.forEach(r => m[r[state.classCol]] = (m[r[state.classCol]]||0)+1);
+  return Object.entries(m).sort((a,b)=>b[1]-a[1])[0]?.[0] ?? '—';
+}
+
+/* ─────────── METRICS ─────────── */
+function setMetric(m) {
+  state.metric = m;
+  document.getElementById('metric-btn-gini').classList.toggle('active', m==='gini');
+  document.getElementById('metric-btn-entropy').classList.toggle('active', m==='entropy');
+  if (state.data.length) runSplitAnalysis();
+}
+function setSBMetric(m) {
+  state.sbMetric = m;
+  document.getElementById('sb-metric-btn-gini').classList.toggle('active', m==='gini');
+  document.getElementById('sb-metric-btn-entropy').classList.toggle('active', m==='entropy');
+  if (state.data.length) sandboxUpdate();
+}
+
+/* ─────────── DEMO DATA ─────────── */
+function loadDemo(name) {
+  let rows = [];
+  if (name === 'simple') {
+    for (let i=0;i<60;i++) {
+      const x1 = +(Math.random()*10).toFixed(2);
+      const x2 = +(Math.random()*10).toFixed(2);
+      const cls = (x1 + x2 > 10) ? 'A' : 'B';
+      rows.push({X1:x1, X2:x2, Class:cls});
+    }
+  } else if (name === 'iris') {
+    const data = [[5.1,3.5,1.4,0.2,'setosa'],[4.9,3.0,1.4,0.2,'setosa'],[4.7,3.2,1.3,0.2,'setosa'],[5.4,3.9,1.7,0.4,'setosa'],[5.0,3.6,1.4,0.3,'setosa'],[4.6,3.4,1.4,0.3,'setosa'],[5.0,3.4,1.5,0.2,'setosa'],[4.4,2.9,1.4,0.2,'setosa'],[4.9,3.1,1.5,0.1,'setosa'],[5.4,3.7,1.5,0.2,'setosa'],[4.8,3.4,1.6,0.2,'setosa'],[4.8,3.0,1.4,0.1,'setosa'],[5.8,4.0,1.2,0.2,'setosa'],[5.7,4.4,1.5,0.4,'setosa'],[5.4,3.9,1.3,0.4,'setosa'],[5.1,3.5,1.4,0.3,'setosa'],[5.7,3.8,1.7,0.3,'setosa'],[5.1,3.8,1.5,0.3,'setosa'],[5.4,3.4,1.7,0.2,'setosa'],[5.1,3.7,1.5,0.4,'setosa'],[4.6,3.6,1.0,0.2,'setosa'],[5.1,3.3,1.7,0.5,'setosa'],[4.8,3.4,1.9,0.2,'setosa'],[5.0,3.0,1.6,0.2,'setosa'],[5.0,3.4,1.6,0.4,'setosa'],[5.2,3.5,1.5,0.2,'setosa'],[5.2,3.4,1.4,0.2,'setosa'],[4.7,3.2,1.6,0.2,'setosa'],[4.8,3.1,1.6,0.2,'setosa'],[5.4,3.4,1.5,0.4,'setosa'],[5.2,4.1,1.5,0.1,'setosa'],[5.5,4.2,1.4,0.2,'setosa'],[4.9,3.1,1.5,0.2,'setosa'],[5.0,3.2,1.2,0.2,'setosa'],[5.5,3.5,1.3,0.2,'setosa'],[4.9,3.6,1.4,0.1,'setosa'],[4.4,3.0,1.3,0.2,'setosa'],[5.1,3.4,1.5,0.2,'setosa'],[5.0,3.5,1.3,0.3,'setosa'],[4.5,2.3,1.3,0.3,'setosa'],[4.4,3.2,1.3,0.2,'setosa'],[5.0,3.5,1.6,0.6,'setosa'],[5.1,3.8,1.9,0.4,'setosa'],[4.8,3.0,1.4,0.3,'setosa'],[5.1,3.8,1.6,0.2,'setosa'],[4.6,3.2,1.4,0.2,'setosa'],[5.3,3.7,1.5,0.2,'setosa'],[5.0,3.3,1.4,0.2,'setosa'],[7.0,3.2,4.7,1.4,'versicolor'],[6.4,3.2,4.5,1.5,'versicolor'],[6.9,3.1,4.9,1.5,'versicolor'],[5.5,2.3,4.0,1.3,'versicolor'],[6.5,2.8,4.6,1.5,'versicolor'],[5.7,2.8,4.5,1.3,'versicolor'],[6.3,3.3,4.7,1.6,'versicolor'],[4.9,2.4,3.3,1.0,'versicolor'],[6.6,2.9,4.6,1.3,'versicolor'],[5.2,2.7,3.9,1.4,'versicolor'],[5.0,2.0,3.5,1.0,'versicolor'],[5.9,3.0,4.2,1.5,'versicolor'],[6.0,2.2,4.0,1.0,'versicolor'],[6.1,2.9,4.7,1.4,'versicolor'],[5.6,2.9,3.6,1.3,'versicolor'],[6.7,3.1,4.4,1.4,'versicolor'],[5.6,3.0,4.5,1.5,'versicolor'],[5.8,2.7,4.1,1.0,'versicolor'],[6.2,2.2,4.5,1.5,'versicolor'],[5.6,2.5,3.9,1.1,'versicolor'],[5.9,3.2,4.8,1.8,'versicolor'],[6.1,2.8,4.0,1.3,'versicolor'],[6.3,2.5,4.9,1.5,'versicolor'],[6.1,2.8,4.7,1.2,'versicolor'],[6.4,2.9,4.3,1.3,'versicolor'],[6.6,3.0,4.4,1.4,'versicolor'],[6.8,2.8,4.8,1.4,'versicolor'],[6.7,3.0,5.0,1.7,'versicolor'],[6.0,2.9,4.5,1.5,'versicolor'],[5.7,2.6,3.5,1.0,'versicolor'],[5.5,2.4,3.8,1.1,'versicolor'],[5.5,2.4,3.7,1.0,'versicolor'],[5.8,2.7,3.9,1.2,'versicolor'],[6.0,2.7,5.1,1.6,'versicolor'],[5.4,3.0,4.5,1.5,'versicolor'],[6.0,3.4,4.5,1.6,'versicolor'],[6.7,3.1,4.7,1.5,'versicolor'],[6.3,2.3,4.4,1.3,'versicolor'],[5.6,3.0,4.1,1.3,'versicolor'],[5.5,2.5,4.0,1.3,'versicolor'],[5.5,2.6,4.4,1.2,'versicolor'],[6.1,3.0,4.6,1.4,'versicolor'],[5.8,2.6,4.0,1.2,'versicolor'],[5.0,2.3,3.3,1.0,'versicolor'],[5.6,2.7,4.2,1.3,'versicolor'],[5.7,3.0,4.2,1.2,'versicolor'],[5.7,2.9,4.2,1.3,'versicolor'],[6.2,2.9,4.3,1.3,'versicolor'],[5.1,2.5,3.0,1.1,'versicolor'],[5.7,2.8,4.1,1.3,'versicolor'],[6.3,3.3,6.0,2.5,'virginica'],[5.8,2.7,5.1,1.9,'virginica'],[7.1,3.0,5.9,2.1,'virginica'],[6.3,2.9,5.6,1.8,'virginica'],[6.5,3.0,5.8,2.2,'virginica'],[7.6,3.0,6.6,2.1,'virginica'],[4.9,2.5,4.5,1.7,'virginica'],[7.3,2.9,6.3,1.8,'virginica'],[6.7,2.5,5.8,1.8,'virginica'],[7.2,3.6,6.1,2.5,'virginica'],[6.5,3.2,5.1,2.0,'virginica'],[6.4,2.7,5.3,1.9,'virginica'],[6.8,3.0,5.5,2.1,'virginica'],[5.7,2.5,5.0,2.0,'virginica'],[5.8,2.8,5.1,2.4,'virginica'],[6.4,3.2,5.3,2.3,'virginica'],[6.5,3.0,5.5,1.8,'virginica'],[7.7,3.8,6.7,2.2,'virginica'],[7.7,2.6,6.9,2.3,'virginica'],[6.0,2.2,5.0,1.5,'virginica'],[6.9,3.2,5.7,2.3,'virginica'],[5.6,2.8,4.9,2.0,'virginica'],[7.7,2.8,6.7,2.0,'virginica'],[6.3,2.7,4.9,1.8,'virginica'],[6.7,3.3,5.7,2.1,'virginica'],[7.2,3.2,6.0,1.8,'virginica'],[6.2,2.8,4.8,1.8,'virginica'],[6.1,3.0,4.9,1.8,'virginica'],[6.4,2.8,5.6,2.1,'virginica'],[7.2,3.0,5.8,1.6,'virginica'],[7.4,2.8,6.1,1.9,'virginica'],[7.9,3.8,6.4,2.0,'virginica'],[6.4,2.8,5.6,2.2,'virginica'],[6.3,2.8,5.1,1.5,'virginica'],[6.1,2.6,5.6,1.4,'virginica'],[7.7,3.0,6.1,2.3,'virginica'],[6.3,3.4,5.6,2.4,'virginica'],[6.4,3.1,5.5,1.8,'virginica'],[6.0,3.0,4.8,1.8,'virginica'],[6.9,3.1,5.4,2.1,'virginica'],[6.7,3.1,5.6,2.4,'virginica'],[6.9,3.1,5.1,2.3,'virginica'],[5.8,2.7,5.1,1.9,'virginica'],[6.8,3.2,5.9,2.3,'virginica'],[6.7,3.3,5.7,2.5,'virginica'],[6.7,3.0,5.2,2.3,'virginica'],[6.3,2.5,5.0,1.9,'virginica'],[6.5,3.0,5.2,2.0,'virginica'],[6.2,3.4,5.4,2.3,'virginica'],[5.9,3.0,5.1,1.8,'virginica']];
+    rows = data.map(d=>({SepalLen:d[0],SepalWid:d[1],PetalLen:d[2],PetalWid:d[3],Species:d[4]}));
+  } else if (name === 'heart') {
+    for (let i=0;i<100;i++) {
+      const age = Math.round(40 + Math.random()*35);
+      const chol = Math.round(150 + Math.random()*200);
+      const maxHR = Math.round(100 + Math.random()*100);
+      const risk = (age > 55 && chol > 240) || (maxHR < 140 && age > 50) ? 'High' : 'Low';
+      rows.push({Age:age, Cholesterol:chol, MaxHR:maxHR, Risk:risk});
+    }
+  }
+  processData(rows, Object.keys(rows[0]).slice(-1)[0]);
+}
+
+/* ─────────── CSV LOADER ─────────── */
+function loadCSV(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const lines = e.target.result.trim().split(/\r?\n/);
+    const headers = lines[0].split(',').map(s=>s.trim().replace(/^"|"$/g,''));
+    const rows = lines.slice(1).map(line => {
+      const vals = line.split(',').map(s=>s.trim().replace(/^"|"$/g,''));
+      const obj = {};
+      headers.forEach((h,i) => {
+        const v = vals[i];
+        obj[h] = isNaN(v) ? v : +v;
+      });
+      return obj;
+    }).filter(r=>Object.values(r).every(v=>v!==undefined&&v!==''));
+    processData(rows, headers[headers.length-1]);
+  };
+  reader.readAsText(file);
+}
+
+function processData(rows, classCol) {
+  state.data = rows;
+  state.classCol = classCol;
+  state.classes = [...new Set(rows.map(r=>r[classCol]))].sort();
+  state.features = Object.keys(rows[0]).filter(k => k !== classCol && typeof rows[0][k] === 'number');
+  renderDataTab();
+  populateSelects();
+  runAllSplits();
+}
+
+/* ─────────── RENDER DATA TAB ─────────── */
+function renderDataTab() {
+  const { data, features, classCol, classes } = state;
+  document.getElementById('data-loaded-section').style.display = '';
+
+  // info grid
+  const grid = document.getElementById('data-info-grid');
+  const classDist = {};
+  classes.forEach(c=>classDist[c]=0);
+  data.forEach(r=>classDist[r[classCol]]++);
+  grid.innerHTML = `
+    <div class="info-box"><div class="val" style="color:var(--accent)">${data.length}</div><div class="lbl">Rows</div></div>
+    <div class="info-box"><div class="val" style="color:var(--accent2)">${features.length}</div><div class="lbl">Features</div></div>
+    <div class="info-box"><div class="val" style="color:var(--accent3)">${classes.length}</div><div class="lbl">Classes</div></div>
+    ${classes.map((c,i)=>`<div class="info-box"><div class="val" style="color:${['var(--split-left)','var(--split-right)','var(--accent3)','var(--accent4)'][i%4]}">${classDist[c]}</div><div class="lbl">${c}</div></div>`).join('')}
+  `;
+
+  // preview table
+  const allCols = [...features, classCol];
+  const preview = data.slice(0, 20);
+  const t = document.getElementById('data-preview-table');
+  t.innerHTML = `<thead><tr>${allCols.map(c=>`<th>${c}</th>`).join('')}</tr></thead>
+    <tbody>${preview.map(r=>`<tr>${allCols.map(c=>`<td class="${c===classCol?(classes.indexOf(r[c])===0?'class-0':'class-1'):''}">${typeof r[c]==='number'?r[c].toFixed(3):r[c]}</td>`).join('')}</tr>`).join('')}</tbody>`;
+
+  // class dist chart
+  drawClassDist(classDist);
+}
+
+function drawClassDist(dist) {
+  const canvas = document.getElementById('class-dist-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+  const total = Object.values(dist).reduce((a,b)=>a+b,0);
+  const cols = ['#34d399','#f87171','#60a5fa','#f59e0b','#f472b6'];
+  let x = 40;
+  const barH = 28, gap = 14;
+  Object.entries(dist).forEach(([cls, n], i) => {
+    const w = Math.max(4, (n/total)*(W-100));
+    ctx.fillStyle = cols[i%cols.length];
+    ctx.beginPath(); ctx.roundRect(x, 15+i*(barH+gap), w, barH, 4); ctx.fill();
+    ctx.fillStyle = '#8892a4'; ctx.font = '11px JetBrains Mono'; ctx.textAlign = 'left';
+    ctx.fillText(cls, 4, 15+i*(barH+gap)+18);
+    ctx.fillStyle = '#e2e8f0'; ctx.font = '11px JetBrains Mono'; ctx.textAlign = 'left';
+    ctx.fillText(`${n} (${(n/total*100).toFixed(1)}%)`, x+w+6, 15+i*(barH+gap)+18);
+  });
+}
+
+/* ─────────── POPULATE SELECTS ─────────── */
+function populateSelects() {
+  ['split-feature-select','sandbox-feature'].forEach(id => {
+    const el = document.getElementById(id);
+    el.innerHTML = state.features.map(f=>`<option value="${f}">${f}</option>`).join('');
+  });
+}
+
+/* ─────────── SPLIT ANALYSIS ─────────── */
+function computeSplitsForFeature(feature) {
+  const n = state.data.length;
+  const parentCounts = classCounts(state.data);
+  const parentImp = impurity(parentCounts, n);
+  const vals = state.data.map(r=>r[feature]);
+  const sorted = [...new Set(vals)].sort((a,b)=>a-b);
+  const thresholds = [];
+  for (let i=0;i<sorted.length-1;i++) thresholds.push((sorted[i]+sorted[i+1])/2);
+
+  return thresholds.map(t => {
+    const left = state.data.filter(r=>r[feature]<=t);
+    const right = state.data.filter(r=>r[feature]>t);
+    const lc = classCounts(left), rc = classCounts(right);
+    const li = impurity(lc, left.length), ri = impurity(rc, right.length);
+    const wtd = (left.length/n)*li + (right.length/n)*ri;
+    return { feature, threshold:t, parentImp, leftImp:li, rightImp:ri, weightedChildImp:wtd,
+      gain: parentImp - wtd, leftN:left.length, rightN:right.length };
+  });
+}
+
+function runAllSplits() {
+  const all = [];
+  state.features.forEach(f => all.push(...computeSplitsForFeature(f)));
+  all.sort((a,b)=>b.gain-a.gain);
+  state.splitResults = all;
+  renderSplitRankTable();
+  buildExportSplitTable();
+}
+
+function runSplitAnalysis() {
+  if (!state.data.length) return;
+  runAllSplits();
+  const feature = document.getElementById('split-feature-select').value;
+  if (!feature) return;
+  const splits = computeSplitsForFeature(feature);
+  drawSplitScanChart(splits, document.getElementById('split-scan-canvas'));
+  document.getElementById('split-results-card').style.display = '';
+}
+
+function renderSplitRankTable() {
+  const body = document.getElementById('split-rank-body');
+  const best = state.splitResults[0];
+  body.innerHTML = state.splitResults.slice(0,50).map((s,i)=>`
+    <tr class="${s===best?'best-row':''}">
+      <td>${i+1}</td><td>${s.feature}</td><td>${s.threshold.toFixed(4)}</td>
+      <td>${s.parentImp.toFixed(4)}</td><td>${s.leftImp.toFixed(4)}</td>
+      <td>${s.rightImp.toFixed(4)}</td><td>${s.weightedChildImp.toFixed(4)}</td>
+      <td style="color:${i===0?'var(--accent)':'var(--text)'}">${s.gain.toFixed(4)}</td>
+    </tr>`).join('');
+}
+
+/* ─────────── SPLIT SCAN CHART ─────────── */
+function drawSplitScanChart(splits, canvas) {
+  if (!splits.length) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const pad = {top:20, right:20, bottom:40, left:52};
+  ctx.clearRect(0,0,W,H);
+
+  const gains = splits.map(s=>s.gain);
+  const minG = Math.min(...gains), maxG = Math.max(...gains);
+  const xScale = i => pad.left + (i/(splits.length-1||1))*(W-pad.left-pad.right);
+  const yScale = g => H-pad.bottom - (g-minG)/(maxG-minG||1)*(H-pad.top-pad.bottom);
+
+  // grid
+  ctx.strokeStyle = 'rgba(42,48,69,0.6)'; ctx.lineWidth = 1;
+  for (let i=0;i<=4;i++) {
+    const y = pad.top + i*(H-pad.top-pad.bottom)/4;
+    ctx.beginPath(); ctx.moveTo(pad.left,y); ctx.lineTo(W-pad.right,y); ctx.stroke();
+    const v = maxG - i*(maxG-minG)/4;
+    ctx.fillStyle='#8892a4'; ctx.font='10px JetBrains Mono'; ctx.textAlign='right';
+    ctx.fillText(v.toFixed(3), pad.left-4, y+3);
+  }
+
+  // line
+  ctx.beginPath();
+  splits.forEach((s,i) => {
+    const x=xScale(i), y=yScale(s.gain);
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  });
+  ctx.strokeStyle='rgba(96,165,250,0.7)'; ctx.lineWidth=2; ctx.stroke();
+
+  // fill
+  ctx.beginPath();
+  splits.forEach((s,i)=>{ const x=xScale(i),y=yScale(s.gain); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
+  ctx.lineTo(xScale(splits.length-1), H-pad.bottom);
+  ctx.lineTo(xScale(0), H-pad.bottom); ctx.closePath();
+  ctx.fillStyle='rgba(96,165,250,0.1)'; ctx.fill();
+
+  // best
+  const bestIdx = gains.indexOf(maxG);
+  const bx=xScale(bestIdx), by=yScale(maxG);
+  ctx.beginPath(); ctx.arc(bx,by,7,0,Math.PI*2);
+  ctx.fillStyle='var(--accent)'; ctx.fill();
+  ctx.font='bold 11px JetBrains Mono'; ctx.fillStyle='#0f1117'; ctx.textAlign='center';
+  ctx.fillText('★',bx,by+4);
+
+  // label
+  ctx.fillStyle='var(--accent)'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+  ctx.fillText(`t=${splits[bestIdx].threshold.toFixed(3)}`, bx, by-12);
+
+  // axis labels
+  ctx.fillStyle='#8892a4'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+  ctx.fillText('Threshold Index →', W/2, H-6);
+  ctx.save(); ctx.translate(12, H/2); ctx.rotate(-Math.PI/2);
+  ctx.textAlign='center';
+  ctx.fillText('Info Gain', 0, 0); ctx.restore();
+}
+
+/* ─────────── SANDBOX ─────────── */
+function sandboxUpdate() {
+  if (!state.data.length) return;
+  const feature = document.getElementById('sandbox-feature').value;
+  if (!feature) return;
+  const vals = state.data.map(r=>r[feature]).sort((a,b)=>a-b);
+  const min = vals[0], max = vals[vals.length-1];
+  const slider = document.getElementById('sandbox-slider');
+  slider.min = 0; slider.max = 1000;
+  const cutoffPct = parseInt(slider.value)/1000;
+  state.sbCutoff = min + cutoffPct*(max-min);
+
+  // best gain for this feature
+  const splits = state.features.includes(feature) ? computeSplitsForFeature(feature) : [];
+  state.sbMaxGain = splits.length ? Math.max(...splits.map(s=>s.gain)) : 0;
+
+  sandboxDraw(feature);
+}
+
+function sandboxSliderMove(val) {
+  const feature = document.getElementById('sandbox-feature').value;
+  if (!feature || !state.data.length) return;
+  const vals = state.data.map(r=>r[feature]).sort((a,b)=>a-b);
+  const min=vals[0], max=vals[vals.length-1];
+  state.sbCutoff = min + (val/1000)*(max-min);
+  // update slider gradient
+  const slider = document.getElementById('sandbox-slider');
+  slider.style.setProperty('--pct', `${val/10}%`);
+  sandboxDraw(feature);
+}
+
+function sandboxDraw(feature) {
+  const n = state.data.length;
+  const cutoff = state.sbCutoff;
+  const leftRows = state.data.filter(r=>r[feature]<=cutoff);
+  const rightRows = state.data.filter(r=>r[feature]>cutoff);
+
+  const parentCounts = classCounts(state.data);
+  const parentImp2 = gini(parentCounts,n);
+  const parentImpE = entropy(parentCounts,n);
+  const parentImpF = impuritySB(parentCounts,n);
+
+  const lc = classCounts(leftRows), rc = classCounts(rightRows);
+  const leftImpF = impuritySB(lc, leftRows.length);
+  const rightImpF = impuritySB(rc, rightRows.length);
+  const wtd = (leftRows.length/n)*leftImpF + (rightRows.length/n)*rightImpF;
+  const gain = parentImpF - wtd;
+
+  // update DOM
+  document.getElementById('sandbox-cutoff-val').textContent = cutoff.toFixed(3);
+  document.getElementById('sbn-root-n').textContent = n;
+  document.getElementById('sbn-root-cl').textContent = state.classes.map((c,i)=>`${c}: ${parentCounts[i]}`).join(', ');
+  document.getElementById('sbn-root-imp').textContent = parentImpF.toFixed(4);
+  document.getElementById('sbn-left-n').textContent = leftRows.length;
+  document.getElementById('sbn-left-cl').textContent = state.classes.map((c,i)=>`${c}: ${lc[i]}`).join(', ');
+  document.getElementById('sbn-left-imp').textContent = leftImpF.toFixed(4);
+  document.getElementById('sbn-left-pred').textContent = majority(leftRows);
+  document.getElementById('sbn-right-n').textContent = rightRows.length;
+  document.getElementById('sbn-right-cl').textContent = state.classes.map((c,i)=>`${c}: ${rc[i]}`).join(', ');
+  document.getElementById('sbn-right-imp').textContent = rightImpF.toFixed(4);
+  document.getElementById('sbn-right-pred').textContent = majority(rightRows);
+
+  // gain bar
+  const pct = state.sbMaxGain > 0 ? Math.min(100, gain/state.sbMaxGain*100) : 0;
+  document.getElementById('gain-bar-fill').style.width = pct+'%';
+  document.getElementById('gain-bar-val').innerHTML = `${gain.toFixed(4)} &nbsp;<span id="gain-vs-best" style="color:var(--muted);font-size:0.72rem;">(best possible: ${state.sbMaxGain.toFixed(4)})</span>`;
+
+  // scan chart
+  const splits = computeSplitsForFeature(feature);
+  const canvas = document.getElementById('sandbox-scan-canvas');
+  drawSplitScanWithMarker(splits, canvas, cutoff, gain);
+
+  // tree svg
+  drawTreeSVG(feature, cutoff, majority(leftRows), majority(rightRows), leftRows.length, rightRows.length, gain, leftImpF, rightImpF);
+}
+
+function drawSplitScanWithMarker(splits, canvas, cutoff, myGain) {
+  if (!splits.length) return;
+  drawSplitScanChart(splits, canvas);
+  const ctx = canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  const pad={top:20,right:20,bottom:40,left:52};
+  const gains=splits.map(s=>s.gain);
+  const minG=Math.min(...gains), maxG=Math.max(...gains);
+
+  // find closest threshold index
+  const threshs=splits.map(s=>s.threshold);
+  const minT=Math.min(...threshs), maxT=Math.max(...threshs);
+  const pct=(cutoff-minT)/(maxT-minT||1);
+  const ix=pct*(splits.length-1);
+  const x=pad.left+ix/(splits.length-1||1)*(W-pad.left-pad.right);
+  const y=H-pad.bottom-(myGain-minG)/(maxG-minG||1)*(H-pad.top-pad.bottom);
+
+  ctx.beginPath(); ctx.arc(x,y,8,0,Math.PI*2);
+  ctx.fillStyle='var(--accent3)'; ctx.fill();
+  ctx.font='bold 10px JetBrains Mono'; ctx.fillStyle='#0f1117'; ctx.textAlign='center';
+  ctx.fillText('▲',x,y+3);
+
+  // vertical line
+  ctx.setLineDash([4,3]);
+  ctx.strokeStyle='rgba(245,158,11,0.5)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(x,pad.top); ctx.lineTo(x,H-pad.bottom); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='var(--accent3)'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+  ctx.fillText(`your cutoff: ${cutoff.toFixed(2)}`,x,H-pad.bottom+14);
+}
+
+/* ─────────── TREE SVG ─────────── */
+function drawTreeSVG(feature, cutoff, leftPred, rightPred, leftN, rightN, gain, leftImp, rightImp) {
+  const svg = document.getElementById('tree-svg');
+  const isGood = gain > state.sbMaxGain * 0.85;
+  const W=600, H=220;
+  svg.innerHTML = `
+    <!-- root -->
+    <rect x="175" y="16" width="250" height="64" rx="10" fill="#1e2333" stroke="#60a5fa" stroke-width="1.5"/>
+    <text x="300" y="38" text-anchor="middle" font-size="11" fill="#60a5fa" font-weight="700" font-family="Syne,sans-serif" letter-spacing="1">ROOT NODE  (n=${leftN+rightN})</text>
+    <text x="300" y="56" text-anchor="middle" font-size="12" fill="#e2e8f0" font-family="JetBrains Mono,monospace">${feature} ≤ ${cutoff.toFixed(3)} ?</text>
+    <text x="300" y="73" text-anchor="middle" font-size="10" fill="#8892a4" font-family="JetBrains Mono,monospace">Gain = ${gain.toFixed(4)}</text>
+
+    <!-- edges -->
+    <line x1="240" y1="80" x2="130" y2="148" stroke="#34d399" stroke-width="1.5" stroke-dasharray="${isGood?'none':'5,3'}"/>
+    <line x1="360" y1="80" x2="470" y2="148" stroke="#f87171" stroke-width="1.5" stroke-dasharray="${isGood?'none':'5,3'}"/>
+    <text x="172" y="122" font-size="11" fill="#34d399" font-family="Syne,sans-serif" font-weight="700">YES</text>
+    <text x="428" y="122" font-size="11" fill="#f87171" font-family="Syne,sans-serif" font-weight="700">NO</text>
+
+    <!-- left leaf -->
+    <rect x="30" y="148" width="200" height="60" rx="10" fill="#1e2333" stroke="#34d399" stroke-width="1.5"/>
+    <text x="130" y="168" text-anchor="middle" font-size="10" fill="#34d399" font-weight="700" font-family="Syne,sans-serif" letter-spacing="1">LEFT LEAF  (n=${leftN})</text>
+    <text x="130" y="186" text-anchor="middle" font-size="12" fill="#e2e8f0" font-family="JetBrains Mono,monospace">Predict: ${leftPred}</text>
+    <text x="130" y="200" text-anchor="middle" font-size="10" fill="#8892a4" font-family="JetBrains Mono,monospace">Imp = ${leftImp.toFixed(4)}</text>
+
+    <!-- right leaf -->
+    <rect x="370" y="148" width="200" height="60" rx="10" fill="#1e2333" stroke="#f87171" stroke-width="1.5"/>
+    <text x="470" y="168" text-anchor="middle" font-size="10" fill="#f87171" font-weight="700" font-family="Syne,sans-serif" letter-spacing="1">RIGHT LEAF  (n=${rightN})</text>
+    <text x="470" y="186" text-anchor="middle" font-size="12" fill="#e2e8f0" font-family="JetBrains Mono,monospace">Predict: ${rightPred}</text>
+    <text x="470" y="200" text-anchor="middle" font-size="10" fill="#8892a4" font-family="JetBrains Mono,monospace">Imp = ${rightImp.toFixed(4)}</text>
+  `;
+}
+
+/* ─────────── METRIC PLOT ─────────── */
+function updateMetricPlot(p) {
+  document.getElementById('p-val').textContent = p.toFixed(2);
+  const g = 2*p*(1-p);
+  const e = p<=0||p>=1 ? 0 : -p*Math.log2(p)-(1-p)*Math.log2(1-p);
+  document.getElementById('gini-live').textContent = g.toFixed(4);
+  document.getElementById('entropy-live').textContent = e.toFixed(4);
+  drawMetricPlot(p);
+}
+
+function drawMetricPlot(pCurrent) {
+  const canvas = document.getElementById('metric-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  const pad={top:20,right:20,bottom:36,left:46};
+  ctx.clearRect(0,0,W,H);
+
+  // grid
+  ctx.strokeStyle='rgba(42,48,69,0.6)'; ctx.lineWidth=1;
+  [0,0.25,0.5,0.75,1].forEach(v=>{
+    const y=H-pad.bottom-v*(H-pad.top-pad.bottom);
+    ctx.beginPath(); ctx.moveTo(pad.left,y); ctx.lineTo(W-pad.right,y); ctx.stroke();
+    ctx.fillStyle='#8892a4'; ctx.font='10px JetBrains Mono'; ctx.textAlign='right';
+    ctx.fillText(v.toFixed(2),pad.left-4,y+3);
+  });
+  [0,0.25,0.5,0.75,1].forEach(v=>{
+    const x=pad.left+v*(W-pad.left-pad.right);
+    ctx.beginPath(); ctx.moveTo(x,pad.top); ctx.lineTo(x,H-pad.bottom); ctx.stroke();
+    ctx.fillStyle='#8892a4'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+    ctx.fillText(v.toFixed(2),x,H-4);
+  });
+
+  const pts=200;
+  // gini
+  ctx.beginPath();
+  for(let i=0;i<=pts;i++){
+    const p=i/pts, g=2*p*(1-p);
+    const x=pad.left+p*(W-pad.left-pad.right);
+    const y=H-pad.bottom-g*(H-pad.top-pad.bottom);
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }
+  ctx.strokeStyle='#4ade80'; ctx.lineWidth=2.5; ctx.stroke();
+
+  // entropy (max=1 for scale)
+  ctx.beginPath();
+  for(let i=0;i<=pts;i++){
+    const p=i/pts;
+    const e=p<=0||p>=1?0:(-p*Math.log2(p)-(1-p)*Math.log2(1-p));
+    const x=pad.left+p*(W-pad.left-pad.right);
+    const y=H-pad.bottom-(e/1)*(H-pad.top-pad.bottom);
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }
+  ctx.strokeStyle='#60a5fa'; ctx.lineWidth=2.5; ctx.stroke();
+
+  // vertical marker
+  const px=pad.left+pCurrent*(W-pad.left-pad.right);
+  ctx.setLineDash([4,3]); ctx.strokeStyle='rgba(245,158,11,0.7)'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(px,pad.top); ctx.lineTo(px,H-pad.bottom); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // dots
+  const gv=2*pCurrent*(1-pCurrent);
+  const ev=pCurrent<=0||pCurrent>=1?0:(-pCurrent*Math.log2(pCurrent)-(1-pCurrent)*Math.log2(1-pCurrent));
+  [[gv,'#4ade80'],[ev/1,'#60a5fa']].forEach(([v,col])=>{
+    const y=H-pad.bottom-v*(H-pad.top-pad.bottom);
+    ctx.beginPath(); ctx.arc(px,y,5,0,Math.PI*2);
+    ctx.fillStyle=col; ctx.fill();
+  });
+
+  // legend
+  ctx.fillStyle='#4ade80'; ctx.font='11px Syne,sans-serif'; ctx.textAlign='left';
+  ctx.fillText('— Gini', W-130, pad.top+14);
+  ctx.fillStyle='#60a5fa';
+  ctx.fillText('— Entropy (scaled)', W-130, pad.top+30);
+  ctx.fillStyle='#8892a4'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+  ctx.fillText('p (proportion of class 1) →', W/2, H-2);
+}
+
+/* ═══════════════════════════════════════════════════════
+   VISUAL INTUITION — interactive scatter + draggable cuts
+   ═══════════════════════════════════════════════════════ */
+const VI = {
+  pts: [],          // [{x,y,cls}]  x,y in [0,1]
+  metric: 'gini',
+  axis: 'v',        // 'v' | 'h' | 'both'
+  cutV: 0.5,        // vertical cut in data space [0,1]
+  cutH: 0.5,        // horizontal cut in data space [0,1]
+  dragging: null,   // 'v' | 'h' | null
+  PAD: { top:30, right:20, bottom:36, left:40 },
+  optV: 0.5,        // optimal vertical threshold (data space)
+  optH: 0.5,        // optimal horizontal threshold (data space)
+  maxGainV: 0,
+  maxGainH: 0,
+};
+
+function viReshuffle() {
+  VI.pts = [];
+  for (let i=0;i<70;i++) {
+    const x = 0.05 + Math.random()*0.9;
+    const y = 0.05 + Math.random()*0.9;
+    // two clusters with some overlap
+    const cls = (x + y < 1.1 + (Math.random()-0.5)*0.4) ? 0 : 1;
+    VI.pts.push({x, y, cls});
+  }
+  viComputeOptimal();
+  viDraw();
+  viUpdateStats();
+}
+
+function viSetMetric(m) {
+  VI.metric = m;
+  document.getElementById('vi-metric-gini').classList.toggle('active', m==='gini');
+  document.getElementById('vi-metric-entropy').classList.toggle('active', m==='entropy');
+  viComputeOptimal();
+  viDraw();
+  viUpdateStats();
+}
+
+function viSetAxis(a) {
+  VI.axis = a;
+  document.getElementById('vi-axis-v').classList.toggle('active', a==='v');
+  document.getElementById('vi-axis-h').classList.toggle('active', a==='h');
+  document.getElementById('vi-axis-both').classList.toggle('active', a==='both');
+  // update side panel labels
+  document.getElementById('vi-left-title').textContent  = a==='h' ? '▲ Top child'    : '◀ Left child';
+  document.getElementById('vi-right-title').textContent = a==='h' ? '▼ Bottom child' : '▶ Right child';
+  viDraw();
+  viUpdateStats();
+}
+
+/* ── impurity helpers (operate on plain arrays of 0/1 class indices) ── */
+function viImp(arr) {
+  const n = arr.length; if (n===0) return 0;
+  const p = arr.filter(v=>v===0).length / n;
+  if (VI.metric==='gini') return 2*p*(1-p);
+  if (p<=0||p>=1) return 0;
+  return -p*Math.log2(p)-(1-p)*Math.log2(1-p);
+}
+
+function viSplitV(t) { // vertical: left = x<=t
+  const L=[], R=[];
+  VI.pts.forEach(p=>{ (p.x<=t?L:R).push(p.cls); });
+  const n=VI.pts.length;
+  const li=viImp(L), ri=viImp(R);
+  const wtd=(L.length/n)*li+(R.length/n)*ri;
+  return {li, ri, wtd, lN:L.length, rN:R.length,
+    lMaj: viMaj(VI.pts.filter(p=>p.x<=t)),
+    rMaj: viMaj(VI.pts.filter(p=>p.x>t)) };
+}
+function viSplitH(t) { // horizontal: top = y>=t (y is inverted on canvas)
+  const T=[], B=[];
+  VI.pts.forEach(p=>{ (p.y>=t?T:B).push(p.cls); });
+  const n=VI.pts.length;
+  const ti2=viImp(T), bi=viImp(B);
+  const wtd=(T.length/n)*ti2+(B.length/n)*bi;
+  return {li:ti2, ri:bi, wtd, lN:T.length, rN:B.length,
+    lMaj: viMaj(VI.pts.filter(p=>p.y>=t)),
+    rMaj: viMaj(VI.pts.filter(p=>p.y<t)) };
+}
+function viMaj(pts) {
+  if (!pts.length) return '—';
+  const c0=pts.filter(p=>p.cls===0).length;
+  return c0 > pts.length-c0 ? 'A' : 'B';
+}
+
+function viComputeOptimal() {
+  const xs=[...new Set(VI.pts.map(p=>p.x))].sort((a,b)=>a-b);
+  const ys=[...new Set(VI.pts.map(p=>p.y))].sort((a,b)=>a-b);
+  const rootClasses=VI.pts.map(p=>p.cls);
+  const rootImp=viImp(rootClasses);
+
+  // vertical
+  let bestGainV=-Infinity, bestTV=0.5;
+  for(let i=0;i<xs.length-1;i++){
+    const t=(xs[i]+xs[i+1])/2;
+    const {wtd}=viSplitV(t);
+    if(rootImp-wtd>bestGainV){bestGainV=rootImp-wtd; bestTV=t;}
+  }
+  VI.optV=bestTV; VI.maxGainV=Math.max(0,bestGainV);
+
+  // horizontal
+  let bestGainH=-Infinity, bestTH=0.5;
+  for(let i=0;i<ys.length-1;i++){
+    const t=(ys[i]+ys[i+1])/2;
+    const {wtd}=viSplitH(t);
+    if(rootImp-wtd>bestGainH){bestGainH=rootImp-wtd; bestTH=t;}
+  }
+  VI.optH=bestTH; VI.maxGainH=Math.max(0,bestGainH);
+}
+
+/* ── canvas coords ↔ data coords ── */
+function viDataToCanvas(x, y, W, H) {
+  const {top,right,bottom,left}=VI.PAD;
+  return [left+x*(W-left-right), H-bottom-y*(H-top-bottom)];
+}
+function viCanvasToData(cx, cy, W, H) {
+  const {top,right,bottom,left}=VI.PAD;
+  return [(cx-left)/(W-left-right), (H-bottom-cy)/(H-top-bottom)];
+}
+
+/* ── main draw ── */
+function viDraw() {
+  const canvas=document.getElementById('split-visual-canvas');
+  if (!canvas) return;
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  const {top,right,bottom,left}=VI.PAD;
+  const iW=W-left-right, iH=H-top-bottom;
+
+  ctx.clearRect(0,0,W,H);
+
+  // axes
+  ctx.strokeStyle='rgba(42,48,69,0.9)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(left,top); ctx.lineTo(left,H-bottom); ctx.lineTo(W-right,H-bottom); ctx.stroke();
+
+  // grid
+  ctx.strokeStyle='rgba(42,48,69,0.4)'; ctx.lineWidth=0.5;
+  [0.25,0.5,0.75].forEach(v=>{
+    const gx=left+v*iW, gy=H-bottom-v*iH;
+    ctx.beginPath(); ctx.moveTo(gx,top); ctx.lineTo(gx,H-bottom); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(left,gy); ctx.lineTo(W-right,gy); ctx.stroke();
+  });
+
+  // axis tick labels
+  ctx.fillStyle='#8892a4'; ctx.font='9px JetBrains Mono'; ctx.textAlign='center';
+  [0,0.25,0.5,0.75,1].forEach(v=>{
+    ctx.fillText(v.toFixed(2), left+v*iW, H-bottom+12);
+  });
+  ctx.textAlign='right';
+  [0,0.25,0.5,0.75,1].forEach(v=>{
+    ctx.fillText(v.toFixed(2), left-3, H-bottom-v*iH+3);
+  });
+  ctx.fillStyle='#8892a4'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+  ctx.fillText('X₁ →', left+iW/2, H-1);
+  ctx.save(); ctx.translate(9, top+iH/2); ctx.rotate(-Math.PI/2); ctx.fillText('X₂ →', 0, 0); ctx.restore();
+
+  // ── colour background regions ──
+  const useV = VI.axis==='v'||VI.axis==='both';
+  const useH = VI.axis==='h'||VI.axis==='both';
+  const cvX = left + VI.cutV*iW;
+  const cvY = H-bottom - VI.cutH*iH;
+
+  if (useV && !useH) {
+    ctx.fillStyle='rgba(52,211,153,0.07)';
+    ctx.fillRect(left, top, cvX-left, iH);
+    ctx.fillStyle='rgba(248,113,113,0.07)';
+    ctx.fillRect(cvX, top, W-right-cvX, iH);
+  } else if (!useV && useH) {
+    ctx.fillStyle='rgba(52,211,153,0.07)';
+    ctx.fillRect(left, top, iW, cvY-top);
+    ctx.fillStyle='rgba(248,113,113,0.07)';
+    ctx.fillRect(left, cvY, iW, H-bottom-cvY);
+  } else if (useV && useH) {
+    const regions=[
+      [left,top,cvX-left,cvY-top,'rgba(52,211,153,0.09)'],
+      [cvX,top,W-right-cvX,cvY-top,'rgba(248,113,113,0.09)'],
+      [left,cvY,cvX-left,H-bottom-cvY,'rgba(96,165,250,0.09)'],
+      [cvX,cvY,W-right-cvX,H-bottom-cvY,'rgba(245,158,11,0.09)'],
+    ];
+    regions.forEach(([x,y,w,h,c])=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h);});
+  }
+
+  // ── optimal cutoff lines (behind user line) ──
+  ctx.setLineDash([3,5]); ctx.lineWidth=1.2;
+  if (useV) {
+    const ox=left+VI.optV*iW;
+    ctx.strokeStyle='rgba(74,222,128,0.4)';
+    ctx.beginPath(); ctx.moveTo(ox,top); ctx.lineTo(ox,H-bottom); ctx.stroke();
+    // label
+    ctx.fillStyle='rgba(74,222,128,0.6)'; ctx.font='bold 9px Syne,sans-serif'; ctx.textAlign='center';
+    ctx.fillText('opt X₁='+VI.optV.toFixed(2), ox, top-4);
+  }
+  if (useH) {
+    const oy=H-bottom-VI.optH*iH;
+    ctx.strokeStyle='rgba(74,222,128,0.4)';
+    ctx.beginPath(); ctx.moveTo(left,oy); ctx.lineTo(W-right,oy); ctx.stroke();
+    ctx.fillStyle='rgba(74,222,128,0.6)'; ctx.font='bold 9px Syne,sans-serif'; ctx.textAlign='left';
+    ctx.fillText('opt X₂='+VI.optH.toFixed(2), W-right+2, oy+3);
+  }
+  ctx.setLineDash([]);
+
+  // ── user cut lines ──
+  if (useV) {
+    ctx.setLineDash([7,4]); ctx.lineWidth=2;
+    ctx.strokeStyle='rgba(245,158,11,0.9)';
+    ctx.beginPath(); ctx.moveTo(cvX, top); ctx.lineTo(cvX, H-bottom); ctx.stroke();
+    ctx.setLineDash([]);
+    // drag handle
+    ctx.beginPath(); ctx.arc(cvX, top+iH/2, 7, 0, Math.PI*2);
+    ctx.fillStyle='#f59e0b'; ctx.fill();
+    ctx.fillStyle='#0f1117'; ctx.font='bold 9px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('↔', cvX, top+iH/2+3);
+    // cutoff label
+    ctx.fillStyle='#f59e0b'; ctx.font='bold 10px JetBrains Mono'; ctx.textAlign='center';
+    ctx.fillText('X₁≤'+VI.cutV.toFixed(2), cvX, H-bottom+24);
+  }
+  if (useH) {
+    ctx.setLineDash([7,4]); ctx.lineWidth=2;
+    ctx.strokeStyle='rgba(245,158,11,0.9)';
+    ctx.beginPath(); ctx.moveTo(left, cvY); ctx.lineTo(W-right, cvY); ctx.stroke();
+    ctx.setLineDash([]);
+    // drag handle
+    ctx.beginPath(); ctx.arc(left+iW/2, cvY, 7, 0, Math.PI*2);
+    ctx.fillStyle='#f59e0b'; ctx.fill();
+    ctx.fillStyle='#0f1117'; ctx.font='bold 9px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('↕', left+iW/2, cvY+3);
+    // label
+    ctx.fillStyle='#f59e0b'; ctx.font='bold 10px JetBrains Mono'; ctx.textAlign='right';
+    ctx.fillText('X₂≥'+VI.cutH.toFixed(2), W-right, cvY-5);
+  }
+
+  // ── points ──
+  VI.pts.forEach(p=>{
+    const [px,py]=viDataToCanvas(p.x,p.y,W,H);
+    ctx.beginPath();
+    if (p.cls===0) {
+      ctx.arc(px,py,5,0,Math.PI*2);
+      ctx.fillStyle='rgba(96,165,250,0.88)'; ctx.fill();
+      ctx.strokeStyle='rgba(96,165,250,0.3)'; ctx.lineWidth=1; ctx.stroke();
+    } else {
+      const s=5;
+      ctx.moveTo(px-s,py-s); ctx.lineTo(px+s,py+s);
+      ctx.moveTo(px+s,py-s); ctx.lineTo(px-s,py+s);
+      ctx.strokeStyle='rgba(248,113,113,0.88)'; ctx.lineWidth=2; ctx.stroke();
+    }
+  });
+
+  // ── legend ──
+  ctx.fillStyle='rgba(15,17,23,0.75)';
+  ctx.fillRect(left+4, top+4, 80, 36);
+  ctx.fillStyle='#60a5fa'; ctx.beginPath(); ctx.arc(left+14,top+14,4,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#e2e8f0'; ctx.font='10px Lora'; ctx.textAlign='left'; ctx.fillText('Class A',left+22,top+18);
+  ctx.strokeStyle='#f87171'; ctx.lineWidth=1.8;
+  ctx.beginPath(); ctx.moveTo(left+10,top+28); ctx.lineTo(left+18,top+36); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(left+18,top+28); ctx.lineTo(left+10,top+36); ctx.stroke();
+  ctx.fillStyle='#e2e8f0'; ctx.fillText('Class B',left+22,top+34);
+}
+
+/* ── update side-panel stats ── */
+function viUpdateStats() {
+  if (!VI.pts.length) return;
+  const rootClasses=VI.pts.map(p=>p.cls);
+  const rootImp=viImp(rootClasses);
+  document.getElementById('vi-root-n').textContent=VI.pts.length;
+  document.getElementById('vi-root-imp').textContent=rootImp.toFixed(4)+' ('+VI.metric+')';
+
+  const useV=VI.axis==='v'||VI.axis==='both';
+  const useH=VI.axis==='h'||VI.axis==='both';
+
+  // pick which split to show in the panel (primary axis wins; 'both' shows V)
+  let sp;
+  if (!useH || useV) sp=viSplitV(VI.cutV);
+  else                sp=viSplitH(VI.cutH);
+
+  document.getElementById('vi-left-n').textContent=sp.lN;
+  document.getElementById('vi-left-imp').textContent=sp.li.toFixed(4);
+  document.getElementById('vi-left-pred').textContent=sp.lMaj;
+  document.getElementById('vi-right-n').textContent=sp.rN;
+  document.getElementById('vi-right-imp').textContent=sp.ri.toFixed(4);
+  document.getElementById('vi-right-pred').textContent=sp.rMaj;
+
+  const gain=rootImp-sp.wtd;
+  document.getElementById('vi-gain').textContent=gain.toFixed(4);
+  const maxG=Math.max(VI.maxGainV, VI.maxGainH, 0.0001);
+  document.getElementById('vi-gain-bar').style.width=Math.min(100,gain/maxG*100)+'%';
+
+  // optimal label
+  let optStr='';
+  if (useV) optStr+='X₁='+VI.optV.toFixed(3);
+  if (useV && useH) optStr+=' | ';
+  if (useH) optStr+='X₂='+VI.optH.toFixed(3);
+  document.getElementById('vi-optimal').textContent=optStr;
+}
+
+/* ── mouse / touch drag ── */
+function viInitCanvas() {
+  const canvas=document.getElementById('split-visual-canvas');
+  if (!canvas) return;
+
+  function getPos(e) {
+    const r=canvas.getBoundingClientRect();
+    const scaleX=canvas.width/r.width, scaleY=canvas.height/r.height;
+    const cx=(e.touches?e.touches[0].clientX:e.clientX)-r.left;
+    const cy=(e.touches?e.touches[0].clientY:e.clientY)-r.top;
+    return [cx*scaleX, cy*scaleY];
+  }
+
+  function hitTest(cx, cy) {
+    const W=canvas.width, H=canvas.height;
+    const {top,right,bottom,left}=VI.PAD;
+    const iW=W-left-right, iH=H-top-bottom;
+    const useV=VI.axis==='v'||VI.axis==='both';
+    const useH=VI.axis==='h'||VI.axis==='both';
+    const GRAB=14;
+    if (useV) {
+      const vx=left+VI.cutV*iW;
+      if (Math.abs(cx-vx)<GRAB) return 'v';
+    }
+    if (useH) {
+      const hy=H-bottom-VI.cutH*iH;
+      if (Math.abs(cy-hy)<GRAB) return 'h';
+    }
+    return null;
+  }
+
+  function clamp01(v){return Math.max(0.01,Math.min(0.99,v));}
+
+  canvas.addEventListener('mousedown', e=>{
+    const [cx,cy]=getPos(e);
+    VI.dragging=hitTest(cx,cy);
+    if (VI.dragging) { e.preventDefault(); canvas.style.cursor='grabbing'; }
+  });
+  canvas.addEventListener('touchstart', e=>{
+    const [cx,cy]=getPos(e);
+    VI.dragging=hitTest(cx,cy);
+    if (VI.dragging) e.preventDefault();
+  }, {passive:false});
+
+  function onMove(e) {
+    if (!VI.dragging) {
+      // cursor hint
+      const [cx,cy]=getPos(e);
+      const h=hitTest(cx,cy);
+      canvas.style.cursor=h?(h==='v'?'ew-resize':'ns-resize'):'crosshair';
+      return;
+    }
+    e.preventDefault();
+    const [cx,cy]=getPos(e);
+    const W=canvas.width, H=canvas.height;
+    const {top,right,bottom,left}=VI.PAD;
+    const [dx,dy]=viCanvasToData(cx,cy,W,H);
+    if (VI.dragging==='v') VI.cutV=clamp01(dx);
+    if (VI.dragging==='h') VI.cutH=clamp01(dy);
+    viDraw();
+    viUpdateStats();
+  }
+  canvas.addEventListener('mousemove', onMove);
+  canvas.addEventListener('touchmove', onMove, {passive:false});
+
+  function onUp(){
+    VI.dragging=null;
+    canvas.style.cursor='crosshair';
+  }
+  canvas.addEventListener('mouseup', onUp);
+  canvas.addEventListener('touchend', onUp);
+  document.addEventListener('mouseup', onUp);
+}
+
+let viCanvasInited = false;
+function drawConceptScatter() { // called by switchTab('concepts')
+  if (!VI.pts.length) viReshuffle();
+  else { viDraw(); viUpdateStats(); }
+  if (!viCanvasInited) { viInitCanvas(); viCanvasInited = true; }
+}
+
+/* ─────────── EXPORT ─────────── */
+function exportSplitCSV() {
+  if (!state.splitResults.length) { alert('Run split analysis first.'); return; }
+  const headers = ['Rank','Feature','Threshold','Parent_Imp','Left_Imp','Right_Imp','Wtd_Child_Imp','Info_Gain','Left_N','Right_N'];
+  const rows = state.splitResults.slice(0,200).map((s,i)=>[
+    i+1, s.feature, s.threshold.toFixed(6), s.parentImp.toFixed(6),
+    s.leftImp.toFixed(6), s.rightImp.toFixed(6), s.weightedChildImp.toFixed(6),
+    s.gain.toFixed(6), s.leftN, s.rightN
+  ]);
+  downloadCSV([headers, ...rows], 'split_analysis.csv');
+}
+
+function exportDataCSV() {
+  if (!state.data.length) { alert('Load a dataset first.'); return; }
+  const keys = Object.keys(state.data[0]);
+  const rows = state.data.map(r => keys.map(k => r[k]));
+  downloadCSV([keys, ...rows], 'dataset.csv');
+}
+
+function downloadCSV(rows, filename) {
+  const csv = rows.map(r=>r.join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename; a.click();
+}
+
+function buildExportSplitTable() {
+  if (!state.splitResults.length) return;
+  document.getElementById('export-split-table-card').style.display='';
+  const body = document.getElementById('export-split-body');
+  body.innerHTML = state.splitResults.slice(0,100).map((s,i)=>`
+    <tr>
+      <td>${i+1}</td><td>${s.feature}</td><td>${s.threshold.toFixed(4)}</td>
+      <td>${s.gain.toFixed(4)}</td><td>${s.leftN}</td><td>${s.rightN}</td>
+      <td>—</td><td>—</td>
+    </tr>`).join('');
+}
+
+function buildExportSummary() {
+  if (!state.data.length) return;
+  const best = state.splitResults[0];
+  const metric = state.metric === 'gini' ? 'Gini' : 'Entropy';
+  const classDist = {};
+  state.classes.forEach(c=>classDist[c]=0);
+  state.data.forEach(r=>classDist[r[state.classCol]]++);
+
+  document.getElementById('export-summary-content').innerHTML = `
+    <div class="info-grid">
+      <div class="info-box"><div class="val" style="color:var(--accent)">${state.data.length}</div><div class="lbl">Total Rows</div></div>
+      <div class="info-box"><div class="val" style="color:var(--accent2)">${state.features.length}</div><div class="lbl">Features</div></div>
+      <div class="info-box"><div class="val" style="color:var(--accent3)">${state.classes.length}</div><div class="lbl">Classes</div></div>
+      <div class="info-box"><div class="val" style="color:var(--accent4)">${metric}</div><div class="lbl">Metric Used</div></div>
+    </div>
+    <div style="margin:1rem 0;">
+      <div class="card-title" style="margin-bottom:0.6rem;"><span class="dot" style="background:var(--accent3)"></span>Class Distribution</div>
+      ${Object.entries(classDist).map(([c,n])=>`<div style="font-family:'JetBrains Mono',monospace;font-size:0.85rem;margin:0.3rem 0;color:var(--text);">${c}: <strong>${n}</strong> (${(n/state.data.length*100).toFixed(1)}%)</div>`).join('')}
+    </div>
+    ${best ? `
+    <div style="margin:1rem 0;">
+      <div class="card-title" style="margin-bottom:0.6rem;"><span class="dot" style="background:var(--accent)"></span>Best Split (Metric: ${metric})</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:0.85rem;line-height:2;color:var(--text);">
+        Feature: <strong style="color:var(--accent)">${best.feature}</strong><br>
+        Threshold: <strong style="color:var(--accent)">${best.threshold.toFixed(4)}</strong><br>
+        Information Gain: <strong style="color:var(--accent)">${best.gain.toFixed(4)}</strong><br>
+        Parent Impurity: <strong>${best.parentImp.toFixed(4)}</strong><br>
+        Left Node — n=${best.leftN}, Impurity=${best.leftImp.toFixed(4)}<br>
+        Right Node — n=${best.rightN}, Impurity=${best.rightImp.toFixed(4)}<br>
+      </div>
+    </div>
+    ` : ''}
+  `;
+}
+
+function printSummary() {
+  buildExportSummary();
+  window.print();
+}
+
+/* ─────────── INIT ─────────── */
+window.onload = () => {
+  viReshuffle();          // seed points + draw scatter
+  viInitCanvas();
+  viCanvasInited = true;
+  drawMetricPlot(0.5);
+  updateMetricPlot(0.5);
+};
+</script>
+</body>
+</html>
